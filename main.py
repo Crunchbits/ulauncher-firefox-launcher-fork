@@ -18,11 +18,8 @@ import urllib.parse
 class FirefoxExtension(Extension):
     def __init__(self):
         super(FirefoxExtension, self).__init__()
-
-        #   Firefox database object
         self.database = FirefoxDatabase()
-
-        #   Ulauncher Events
+        
         self.subscribe(KeywordQueryEvent, KeywordQueryEventListener())
         self.subscribe(SystemExitEvent, SystemExitEventListener())
         self.subscribe(PreferencesEvent, PreferencesEventListener())
@@ -31,28 +28,38 @@ class FirefoxExtension(Extension):
 
 class PreferencesEventListener(EventListener):
     def on_event(self, event: PreferencesEvent, extension: FirefoxExtension):
-        #   Results Order
+        # Extract base settings
         extension.database.order = event.preferences["order"]
-        #   Results Number
         try:
-            n = int(event.preferences["limit"])
-        except:
-            n = 10
-        extension.database.limit = n
+            extension.database.limit = int(event.preferences["limit"])
+        except ValueError:
+            extension.database.limit = 10
+            
+        # Extract new settings
+        extension.database.custom_path = event.preferences.get("custom_path", "")
+        extension.database.enable_bookmarks = (event.preferences.get("enable_bookmarks", "True") == "True")
+        extension.database.enable_history = (event.preferences.get("enable_history", "True") == "True")
+        
+        # Initialize database connection AFTER applying custom preferences
+        extension.database.update_connection()
 
 
 class PreferencesUpdateEventListener(EventListener):
     def on_event(self, event: PreferencesUpdateEvent, extension: FirefoxExtension):
-        #   Results Order
         if event.id == "order":
             extension.database.order = event.new_value
-        #   Results Number
         elif event.id == "limit":
             try:
-                n = int(event.new_value)
-                extension.database.limit = n
-            except:
+                extension.database.limit = int(event.new_value)
+            except ValueError:
                 pass
+        elif event.id == "custom_path":
+            extension.database.custom_path = event.new_value
+            extension.database.update_connection() # Reconnect if the path changes
+        elif event.id == "enable_bookmarks":
+            extension.database.enable_bookmarks = (event.new_value == "True")
+        elif event.id == "enable_history":
+            extension.database.enable_history = (event.new_value == "True")
 
 
 class SystemExitEventListener(EventListener):
@@ -61,7 +68,6 @@ class SystemExitEventListener(EventListener):
 
 
 class KeywordQueryEventListener(EventListener):
-
     def _parse_url(self, query, default_protocol="https"):
         m = re.match(
             r"^(?:([a-z-A-Z]+)://)?([a-zA-Z0-9/-_]+\.[a-zA-Z0-9/-_\.]+)(?:\?(.*))?$",
@@ -82,11 +88,8 @@ class KeywordQueryEventListener(EventListener):
         query = event.get_argument() if event.get_argument() else ""
         items = []
 
-        #    Open website
-        desc = ""
-        action = None
+        # Open website placeholder
         url = self._parse_url(query)
-
         if url:
             desc = url
             action = OpenUrlAction(url)
@@ -103,7 +106,7 @@ class KeywordQueryEventListener(EventListener):
             )
         )
 
-        #   Search Firefox bookmarks and history
+        # Search Firefox bookmarks and history
         results = extension.database.search(query)
 
         for link in results:
@@ -124,7 +127,6 @@ class KeywordQueryEventListener(EventListener):
                 )
 
         return RenderResultListAction(items)
-
 
 if __name__ == "__main__":
     FirefoxExtension().run()
