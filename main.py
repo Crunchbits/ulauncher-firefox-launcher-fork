@@ -28,19 +28,16 @@ class FirefoxExtension(Extension):
 
 class PreferencesEventListener(EventListener):
     def on_event(self, event: PreferencesEvent, extension: FirefoxExtension):
-        # Extract base settings
         extension.database.order = event.preferences["order"]
         try:
             extension.database.limit = int(event.preferences["limit"])
         except ValueError:
             extension.database.limit = 10
             
-        # Extract new settings
         extension.database.custom_path = event.preferences.get("custom_path", "")
         extension.database.enable_bookmarks = (event.preferences.get("enable_bookmarks", "True") == "True")
         extension.database.enable_history = (event.preferences.get("enable_history", "True") == "True")
         
-        # Initialize database connection AFTER applying custom preferences
         extension.database.update_connection()
 
 
@@ -55,7 +52,7 @@ class PreferencesUpdateEventListener(EventListener):
                 pass
         elif event.id == "custom_path":
             extension.database.custom_path = event.new_value
-            extension.database.update_connection() # Reconnect if the path changes
+            extension.database.update_connection()
         elif event.id == "enable_bookmarks":
             extension.database.enable_bookmarks = (event.new_value == "True")
         elif event.id == "enable_history":
@@ -88,19 +85,31 @@ class KeywordQueryEventListener(EventListener):
         query = event.get_argument() if event.get_argument() else ""
         items = []
 
-        # Open website placeholder
         url = self._parse_url(query)
-        if url:
-            desc = url
-            action = OpenUrlAction(url)
+        search_engine_url = extension.preferences.get("search_engine", "https://www.google.com/search?q=%s")
+
+        if query:
+            if url:
+                desc = f"Open URL: {url}"
+                action = OpenUrlAction(url)
+            else:
+                # If not a valid URL, treat as a search query
+                encoded_query = urllib.parse.quote_plus(query)
+                if "%s" in search_engine_url:
+                    search_url = search_engine_url.replace("%s", encoded_query)
+                else:
+                    search_url = f"{search_engine_url}{encoded_query}"
+                
+                desc = f"Search for '{query}'"
+                action = OpenUrlAction(search_url)
         else:
-            desc = "Type in a valid URL and press Enter..."
+            desc = "Type a URL or search query and press Enter..."
             action = DoNothingAction()
 
         items.append(
             ExtensionResultItem(
                 icon="images/icon.png",
-                name="Open URL",
+                name="Search Query",
                 description=desc,
                 on_enter=action,
             )
@@ -110,18 +119,18 @@ class KeywordQueryEventListener(EventListener):
         results = extension.database.search(query)
 
         for link in results:
-            url = link[0]
-            title = link[1] if link[1] else url
+            url_link = link[0]
+            title = link[1] if link[1] else url_link
 
-            if url != query:
+            if url_link != query:
                 items.append(
                     ExtensionResultItem(
                         icon="images/icon.png",
                         name=title,
-                        description=url,
-                        on_enter=OpenUrlAction(url),
+                        description=url_link,
+                        on_enter=OpenUrlAction(url_link),
                         on_alt_enter=SetUserQueryAction(
-                            f'{extension.preferences["kw"]} {url}'
+                            f'{extension.preferences["kw"]} {url_link}'
                         ),
                     )
                 )
