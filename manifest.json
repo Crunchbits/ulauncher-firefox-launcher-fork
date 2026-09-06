@@ -18,21 +18,46 @@
       {
         "id": "order",
         "type": "select",
-        "name": "Histroy results order",
+        "name": "History results order",
         "default_value": "frecency",
         "options":[
           {"value":"frecency","text":"Firefox Frecency"},
           {"value":"visit","text":"Visit Count"},
           {"value":"recent","text":"Last Visit"}
-          ]
+        ]
       },  
       {
         "id": "limit",
         "type": "input",
         "name": "History results number",
         "default_value": "5"
+      },
+      {
+        "id": "custom_path",
+        "type": "input",
+        "name": "Custom Firefox Directory",
+        "description": "Leave blank for default. Supply the folder containing profiles.ini OR the direct profile folder.",
+        "default_value": ""
+      },
+      {
+        "id": "enable_bookmarks",
+        "type": "select",
+        "name": "Enable Bookmarks",
+        "default_value": "True",
+        "options": [
+          {"value": "True", "text": "Yes"},
+          {"value": "False", "text": "No"}
+        ]
+      },
+      {
+        "id": "enable_history",
+        "type": "select",
+        "name": "Enable History",
+        "default_value": "True",
+        "options": [
+          {"value": "True", "text": "Yes"},
+          {"value": "False", "text": "No"}
+        ]
       }
-
     ]
-  }
-  
+}
