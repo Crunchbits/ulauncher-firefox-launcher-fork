@@ -58,6 +58,13 @@
           {"value": "True", "text": "Yes"},
           {"value": "False", "text": "No"}
         ]
+      },
+      {
+        "id": "search_engine",
+        "type": "input",
+        "name": "Search Engine URL",
+        "description": "Use %s where the search query should go.",
+        "default_value": "https://www.google.com/search?q=%s"
       }
     ]
 }
